@@ -1,0 +1,25 @@
+Uklizeni veci se kteryma vas otravuje bot
+pamet:
+ipcs -tm | grep "$(whoami)" | awk '{print $1};' | xargs -L1 ipcrm -m
+
+semafory:
+ipcs -ts | grep "$(whoami)" | awk '{print $1};' | xargs -L1 ipcrm -s
+
+soubory semaforu:
+find /dev/shm -user "$(whoami)" -delete
+
+procesy (podle pojmenovani binarky):
+killall proj2
+
+Hledani veci se kteryma vas muze otravovat bot
+pamet:
+ipcs -tm | grep "$(whoami)"
+
+semafory:
+ipcs -ts | grep "$(whoami)"
+
+soubory semaforu:
+find /dev/shm -user "$(whoami)"
+
+procesy
+ps ux

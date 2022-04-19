@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../hfiles/functions.h"
 
 int checkArguments(int argc, char **arguments, unsigned long* NO, unsigned long* NH, unsigned int* TI, unsigned int* TB) {
   if(argc == 5) {

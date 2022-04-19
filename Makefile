@@ -1,6 +1,5 @@
-parameters=-std=gnu99 -Wall -Wextra -Werror -pedantic
-cfiles = cfiles/main.c cfiles/functions.c cfiles/oxygen.c cfiles/hydrogen.c 
-hfiles = hfiles/functions.h hfiles/oxygen.h hfiles/hydrogen.h 
+parameters=-std=gnu99 -Wall -Wextra -Werror -pedantic -pthread -lpthread
+cfiles = cfiles/main.c
 output = proj2
-app: ${hfiles} ${cfiles}
+app: ${cfiles}
 	gcc ${parameters} -o ${output} ${cfiles}

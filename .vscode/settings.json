@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "functions.h": "c",
+        "stdlib.h": "c",
+        "time.h": "c",
+        "semaphore.h": "c",
+        "unistd.h": "c",
+        "hydrogen.h": "c",
+        "stdio.h": "c"
+    }
+}
