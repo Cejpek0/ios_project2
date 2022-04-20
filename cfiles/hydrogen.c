@@ -11,10 +11,14 @@ void hydrogen (unsigned long id, unsigned long delay, unsigned long* queue_hydro
     srand(getpid());
     printf("%lu: H %lu: started\n", *operation_count, id);
     unsigned long x = rand() % delay + 1;
-    usleep(x * 1000);
-    (*hydrogen_count)++;
+    usleep(x * 1000);     
     (*operation_count)++;
     printf("%lu: H %lu: going to queue\n", *operation_count, id);
+    (*queue_hydrogen)++;
+    (*hydrogen_count)++;
+    if(*queue_hydrogen >= 2 /*Todu a zaroven neni nastvena molekula*/){
+        sem_post(semMolecule);
+    }
     sem_wait(semHydrogen);
     (*operation_count)++;
     unsigned long moleculeID = *molecule_count;
@@ -22,8 +26,8 @@ void hydrogen (unsigned long id, unsigned long delay, unsigned long* queue_hydro
     sem_wait(semMolecule);
     (*operation_count)++;
     printf("%lu: H %lu: molecule %lu created\n", *operation_count, id, moleculeID);
+    (*queue_hydrogen)--;
     return;
-    (*queue_hydrogen)++;
     (void)oxygen_count;
     (void)max_hydrogen;
     (void)max_oxygen;

@@ -17,6 +17,7 @@ void oxygen (unsigned long id, unsigned long delay, unsigned long* queue_oxygen,
     printf("%lu: O %lu: going to queue\n", *operation_count, id);
     (*queue_oxygen)++;
     sem_wait(semOxygen);
+    sem_wait(semMolecule);
     (*operation_count)++;
     (*molecule_count)++;
     unsigned long moleculeID = *molecule_count;
@@ -29,6 +30,7 @@ void oxygen (unsigned long id, unsigned long delay, unsigned long* queue_oxygen,
     sem_post(semMolecule);
     (*operation_count)++;
     printf("%lu: O %lu: molecule %lu created\n", *operation_count, id, moleculeID);
+    sem_post(semOxygen);
     return;
     (void)hydrogen_count;
     (void)max_hydrogen;
