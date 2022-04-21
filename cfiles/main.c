@@ -47,6 +47,10 @@ int main(int argc, char **arguments)
   unsigned long* hydrogen_consumed = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   unsigned long* molecule_count = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
+  /**
+   * @brief INIT SEMAPHORES
+   * 
+   */
   sem_init(semOxygen, 1, 1);
   sem_init(semHydrogen, 1, 0);
   sem_init(semMoleculeReady, 1, 0);
@@ -71,7 +75,7 @@ int main(int argc, char **arguments)
   }
 
   /**
-   * @brief If child then die, if Parent then wait
+   * @brief If child then die, if Parent then wait until all subprocesses end
    */
   if(pid == 0) {
     exit(EXIT_SUCCESS);
@@ -80,9 +84,8 @@ int main(int argc, char **arguments)
   }
 
   /**
-   * @brief Uklid
+   * @brief CLEANUP
    */
-
   sem_destroy(semOxygen);
   sem_destroy(semHydrogen);
   sem_destroy(semMoleculeReady);
