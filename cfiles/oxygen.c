@@ -3,37 +3,76 @@
 #include <time.h>
  #include <unistd.h>
   #include <semaphore.h>
-void oxygen (unsigned long id, unsigned long delay, unsigned long* queue_oxygen,
-                unsigned long* queue_hydrogen, unsigned long max_oxygen, unsigned long max_hydrogen,
-                unsigned long* oxygen_count, unsigned long* hydrogen_count, unsigned long* operation_count,
-                sem_t* semOxygen, unsigned long* molecule_count, sem_t* semMolecule, sem_t* semHydrogen){
+int oxygen (unsigned long id, unsigned long delay,
+              sem_t* semOxygen, sem_t* semMoleculeReady, sem_t* semHydrogen, sem_t* semTwoHydrogensInQueue,
+              unsigned long* operation_count,unsigned long* molecule_count,
+              unsigned long max_oxygen, unsigned long max_hydrogen,
+              unsigned long* oxygen_consumed, unsigned long* hydrogen_consumed){
+    int error;
     srand(getpid()+time(NULL));
+    // START + SLEEP
     (*operation_count)++;
     printf("%lu: O %lu: started\n", *operation_count, id);
     unsigned long x = rand() % delay + 1;
     usleep(x * 1000);
-    (*oxygen_count)++;
+    // QUEUE
     (*operation_count)++;
     printf("%lu: O %lu: going to queue\n", *operation_count, id);
-    (*queue_oxygen)++;
-    sem_wait(semOxygen);
-    sem_wait(semMolecule);
+    sem_wait(semOxygen); // Waiting in queue to start making molecule or to die
+    if(*hydrogen_consumed >= max_hydrogen - 1) { // If there is not enough hydrogen for molecule available, die and tell other children to die
+        (*operation_count)++;
+        printf("%lu: O %lu: not enough H\n", *operation_count, id);
+        error = sem_post(semOxygen);
+        if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    }
+    printf("%lu: čekam na vytvareni\n", *hydrogen_consumed);
+    sem_wait(semTwoHydrogensInQueue); // Wait for signal to start makig molecule from two hydrogens
+    sem_wait(semTwoHydrogensInQueue); 
     (*operation_count)++;
     (*molecule_count)++;
-    unsigned long moleculeID = *molecule_count;
+    unsigned long moleculeID = *molecule_count; // Start creating molecule and notify two hydrogens that the process began
     printf("%lu: O %lu: creating molecule %lu\n", *operation_count, id, *molecule_count);
-    sem_post(semHydrogen);
-    sem_post(semHydrogen);
+    error = sem_post(semHydrogen);
+    if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
+    error = sem_post(semHydrogen);
+    if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
     x = rand() % delay + 1;
-    usleep(x * 1000);
-    sem_post(semMolecule);
-    sem_post(semMolecule);
-    (*operation_count)++;
+    usleep(x * 1000); // Sleep and then notify hydrogens that the process is done
     printf("%lu: O %lu: molecule %lu created\n", *operation_count, id, moleculeID);
-    sem_post(semOxygen);
-    return;
-    (void)hydrogen_count;
-    (void)max_hydrogen;
-    (void)max_oxygen;
-    (void)queue_hydrogen;
+    error = sem_post(semMoleculeReady);
+    if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
+    error = sem_post(semMoleculeReady);
+    if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
+    (*operation_count)++;
+    (*oxygen_consumed)++;
+    if(*oxygen_consumed == max_oxygen) { // If there is no other oxygen, enable one hydrogen process, that will kill all it's siblings
+      error = sem_post(semHydrogen);
+      if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
+      return EXIT_SUCCESS;
+    }
+    error = sem_post(semOxygen); // Tell next oxygen in queue to start making molecule
+    if(error == -1) {
+            printf("FUCK");
+            return EXIT_FAILURE;
+        }
+    return EXIT_SUCCESS;
 }

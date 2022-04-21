@@ -39,25 +39,25 @@ int main(int argc, char **arguments)
    */
   sem_t* semOxygen = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   sem_t* semHydrogen = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  sem_t* semMolecule = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  sem_t* semReadyToCreate = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  sem_t* semMoleculeReady = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  sem_t* semTwoHydrogensInQueue = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   unsigned long* operation_count = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  unsigned long* queue_oxygen = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   unsigned long* queue_hydrogen = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  unsigned long* oxygen_count = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-  unsigned long* hydrogen_count = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  unsigned long* oxygen_consumed = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  unsigned long* hydrogen_consumed = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   unsigned long* molecule_count = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
   sem_init(semOxygen, 1, 1);
   sem_init(semHydrogen, 1, 0);
-  sem_init(semMolecule, 1, 0);
+  sem_init(semMoleculeReady, 1, 0);
+  sem_init(semTwoHydrogensInQueue, 1, 0);
 
   /**
    * @brief FOR KYSLIK/OXYGEN
    */
   for(unsigned long i = 1; i <= NO && pid; ++i) {
     if((pid = fork()) == 0) {
-      oxygen(i, TI, queue_oxygen, queue_hydrogen, NO, NH, oxygen_count, hydrogen_count, operation_count, semOxygen, molecule_count, semMolecule, semHydrogen);
+      oxygen(i, TI, semOxygen, semMoleculeReady, semHydrogen, semTwoHydrogensInQueue, operation_count, molecule_count, NO, NH, oxygen_consumed, hydrogen_consumed);
     } 
   }
 
@@ -66,7 +66,7 @@ int main(int argc, char **arguments)
    */
   for(unsigned long i = 1; i <= NH && pid; ++i) {
     if((pid = fork()) == 0) {
-      hydrogen(i, TI, queue_hydrogen, queue_oxygen, NO, NH, oxygen_count, hydrogen_count, operation_count, semHydrogen, molecule_count, semMolecule);
+      hydrogen(i, TI, semHydrogen, semMoleculeReady, semTwoHydrogensInQueue, operation_count, molecule_count, queue_hydrogen, NO, NH, oxygen_consumed, hydrogen_consumed );
     }
   }
 
@@ -85,25 +85,20 @@ int main(int argc, char **arguments)
 
   sem_destroy(semOxygen);
   sem_destroy(semHydrogen);
-  sem_destroy(semMolecule);
-  sem_destroy(semReadyToCreate);
+  sem_destroy(semMoleculeReady);
+  sem_destroy(semTwoHydrogensInQueue);
 
-  int err = munmap(queue_oxygen, sizeof(unsigned long));
+  int err = munmap(queue_hydrogen, sizeof(unsigned long));
   if(err != 0){
       printf("UnMapping Failed\n");
       return 1;
   }
-  err = munmap(queue_hydrogen, sizeof(unsigned long));
+  err = munmap(hydrogen_consumed, sizeof(unsigned long));
   if(err != 0){
       printf("UnMapping Failed\n");
       return 1;
   }
-  err = munmap(hydrogen_count, sizeof(unsigned long));
-  if(err != 0){
-      printf("UnMapping Failed\n");
-      return 1;
-  }
-  err = munmap(oxygen_count, sizeof(unsigned long));
+  err = munmap(oxygen_consumed, sizeof(unsigned long));
   if(err != 0){
       printf("UnMapping Failed\n");
       return 1;
