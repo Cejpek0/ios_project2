@@ -29,7 +29,6 @@ int oxygen (unsigned long id, unsigned long delay,
         }
         return EXIT_SUCCESS;
     }
-    printf("%lu: čekam na vytvareni\n", *hydrogen_consumed);
     sem_wait(semTwoHydrogensInQueue); // Wait for signal to start makig molecule from two hydrogens
     sem_wait(semTwoHydrogensInQueue); 
     (*operation_count)++;
