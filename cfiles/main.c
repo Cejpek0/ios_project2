@@ -26,18 +26,17 @@ int main(int argc, char **arguments)
     fprintf (stderr, "Spatne argumenty programu\n");
     return 1;
   }
-  /*FILE *fp;
+  FILE *file;
   remove("proj2.out");
-  fp = fopen ("proj2.out", "w");
-  if(fp == NULL) {
-    return 0;
-  }
-  fclose (fp);*/
+  file = fopen ("proj2.out", "w");
+  fclose(file);
+  
   
   /***
    * @brief SHARED MEMORY
    */
   sem_t* semOxygen = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  sem_t* semWrite = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   sem_t* semHydrogen = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   sem_t* semMoleculeReady = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   sem_t* semTwoHydrogensInQueue = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
@@ -46,22 +45,41 @@ int main(int argc, char **arguments)
   unsigned long* oxygen_consumed = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   unsigned long* hydrogen_consumed = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   unsigned long* molecule_count = mmap(NULL, sizeof(unsigned long), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  char* error = mmap(NULL, sizeof(char), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  *error = 0;
 
   /**
    * @brief INIT SEMAPHORES
    * 
    */
   sem_init(semOxygen, 1, 1);
+  sem_init(semWrite, 1, 1);
   sem_init(semHydrogen, 1, 0);
   sem_init(semMoleculeReady, 1, 0);
   sem_init(semTwoHydrogensInQueue, 1, 0);
+
 
   /**
    * @brief FOR KYSLIK/OXYGEN
    */
   for(unsigned long i = 1; i <= NO && pid; ++i) {
     if((pid = fork()) == 0) {
-      oxygen(i, TI, semOxygen, semMoleculeReady, semHydrogen, semTwoHydrogensInQueue, operation_count, molecule_count, NO, NH, oxygen_consumed, hydrogen_consumed);
+      oxygen(i, TI, semOxygen, semHydrogen, semWrite, semMoleculeReady, semTwoHydrogensInQueue, operation_count, molecule_count, NO, NH, oxygen_consumed, hydrogen_consumed, error);
+    } else if (pid < 0) {
+      sem_wait(semWrite);
+      (*operation_count)++;
+      file = fopen ("proj2.out", "a");
+      fprintf(file, "ERROR when creating new process. Exiting\n");
+      fclose(file);
+      sem_post(semWrite);
+      fprintf(stderr, "ERROR when creating new process. Exiting\n");
+      *error = 1;
+      sem_post(semOxygen);
+      sem_post(semHydrogen);
+      sem_post(semMoleculeReady);
+      sem_post(semMoleculeReady);
+      sem_post(semTwoHydrogensInQueue);
+      break;
     } 
   }
 
@@ -70,7 +88,22 @@ int main(int argc, char **arguments)
    */
   for(unsigned long i = 1; i <= NH && pid; ++i) {
     if((pid = fork()) == 0) {
-      hydrogen(i, TI, semHydrogen, semMoleculeReady, semTwoHydrogensInQueue, operation_count, molecule_count, queue_hydrogen, NO, NH, oxygen_consumed, hydrogen_consumed );
+      hydrogen(i, TI, semHydrogen, semWrite, semMoleculeReady, semTwoHydrogensInQueue, operation_count, molecule_count, queue_hydrogen, NO, NH, oxygen_consumed, hydrogen_consumed, error);
+    } else if (pid < 0) {
+      sem_wait(semWrite);
+      (*operation_count)++;
+      file = fopen ("proj2.out", "a");
+      fprintf(file, "ERROR when creating new process. Exiting\n");
+      fclose(file);
+      sem_post(semWrite);
+      fprintf(stderr, "ERROR when creating new process. Exiting\n");
+      *error = 1;
+      sem_post(semOxygen);
+      sem_post(semHydrogen);
+      sem_post(semMoleculeReady);
+      sem_post(semMoleculeReady);
+      sem_post(semTwoHydrogensInQueue);
+      break;
     }
   }
 
@@ -87,6 +120,7 @@ int main(int argc, char **arguments)
    * @brief CLEANUP
    */
   sem_destroy(semOxygen);
+  sem_destroy(semWrite);
   sem_destroy(semHydrogen);
   sem_destroy(semMoleculeReady);
   sem_destroy(semTwoHydrogensInQueue);
@@ -116,7 +150,10 @@ int main(int argc, char **arguments)
       printf("UnMapping Failed\n");
       return 1;
   }
-
-  //kill(pid, SIGKILL);
+  err = munmap(error, sizeof(unsigned long));
+  if(err != 0){
+      printf("UnMapping Failed\n");
+      return 1;
+  }
   return EXIT_SUCCESS;
 }
