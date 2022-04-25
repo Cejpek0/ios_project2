@@ -6,6 +6,7 @@
         "semaphore.h": "c",
         "unistd.h": "c",
         "hydrogen.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdatomic.h": "c"
     }
 }
