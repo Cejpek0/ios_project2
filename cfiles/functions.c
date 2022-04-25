@@ -14,8 +14,9 @@ int checkArguments(int argc, char **arguments, unsigned long* NO, unsigned long*
         *TB = strtoul(arguments[4], &error,10);
         if (*error != '\0') return 0;
         if(*TI > 1000) return 0;
-        if(*
-        TB > 1000) return 0;
+        if(*TB > 1000) return 0;
+        if(*NO == 0) return 0;
+        if(*NH == 0) return 0;
   } else {
       return 0;
   }
